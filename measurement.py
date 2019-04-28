@@ -21,6 +21,19 @@ ph_stepper = PhidgetStepper(stepper_sn=phidget_serial_num)
 positions = range(0, 801, 1)
 
 
+def measure_and_save(instrument, pos):
+    # Tell the VNA to make the sweep
+    instrument.ext_write('INIT1:IMM; *WAI')
+    instrument.ext_wait_for_opc()
+
+    hf = instrument.ext_query_values()
+    instrument.ext_wait_for_opc()
+    instrument.ext_error_checking()  # Error Checking after the data transfer
+
+    # Use h = numpy.load(fname); f = h['f']; s21 = h['hf']
+    np.savez_compressed('s21_{}_{}'.format(time.strftime('%Y%m%d_%H%M%S'), pos), hf=hf, f=f)
+
+
 # Connect to the VNA and configure the measurement settings.
 rm = visa.ResourceManager()
 
@@ -77,30 +90,12 @@ try:
         ph_stepper.wait_to_settle()
         time.sleep(0.5)
 
-        # Tell the VNA to make the sweep
-        vna.ext_write('INIT1:IMM; *WAI')
-        vna.ext_wait_for_opc()
-
-        hf = vna.ext_query_values()
-        vna.ext_wait_for_opc()
-        vna.ext_error_checking()  # Error Checking after the data transfer
-
-        # Use h = numpy.load(fname); f = h['f']; s21 = h['s21']
-        np.savez_compressed('s21_{}_{}'.format(time.strftime('%Y%m%d_%H%M%S'), pos), hf=hf, f=f)
+        measure_and_save(vna, pos)
 
         if first:
             count += 1
             print('\n################## {}/{} ##################'.format(count, len(positions)+2))
-            # Tell the VNA to make the sweep
-            vna.ext_write('INIT1:IMM; *WAI')
-            vna.ext_wait_for_opc()
-
-            hf = vna.ext_query_values()
-            vna.ext_wait_for_opc()
-            vna.ext_error_checking()  # Error Checking after the data transfer
-
-            # Use h = numpy.load(fname); f = h['f']; s21 = h['s21']
-            np.savez_compressed('s21_{}_{}'.format(time.strftime('%Y%m%d_%H%M%S'), pos), hf=hf, f=f)
+            measure_and_save(vna, pos)
             first = False
 
     count += 1
@@ -112,15 +107,7 @@ try:
     ph_stepper.wait_to_settle()
     time.sleep(0.5)
 
-    vna.ext_write('INIT1:IMM; *WAI')
-    vna.ext_wait_for_opc()
-
-    hf = vna.ext_query_values()
-    vna.ext_wait_for_opc()
-    vna.ext_error_checking()  # Error Checking after the data transfer
-
-    # Use h = numpy.load(fname); f = h['f']; hf = h['hf']
-    np.savez_compressed('s21_{}_{}'.format(time.strftime('%Y%m%d_%H%M%S'), positions[0]), hf=hf, f=f)
+    measure_and_save(vna, pos)
 
     # Clean up. Set VNA to Sweep on all channels.
     # Turn on the VNA display.
