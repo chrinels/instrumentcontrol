@@ -41,6 +41,31 @@ def print_status_bar(c, n):
 rm = visa.ResourceManager()
 
 try:
+    """
+    Try to establish a connection with the instrument.
+    Set some parameters, and the configure the Instrument for your
+    measurement. Set the following:
+    Start frequency
+    Stop frequency
+    IF bandwidth
+    Number of sweep points between f_start and f_stop
+
+    Estimate the time it takes to capture on measurement,
+    then set the timeout on the connection, and add some margin.
+
+    Turn OFF the continous SWEEP on the VNA, instead it will only
+    make ONE sweep when it is told to do so.
+
+    Turn OFF the display updates of the VNA to make it faster.
+
+    NOTE!: Settings that you have changed on the VNA will stay, i.e., you
+    can setup the Instrument completely on the instrument, and then go
+    straight to the capture part of the script.
+
+    Settings that are NOT in this script, but probably should be are:
+    Power
+    Average
+    """
     vna = rm.open_resource(resource)
     vna.ext_set_debug(True)
     vna.ext_set_resource(resource)
@@ -74,7 +99,10 @@ try:
     vna.ext_wait_for_opc()
     vna.ext_error_checking()
 
-    # Perform measurement: measure channel -> move Rx -> ...
+    """
+    Now, the instrument should be set, and now it's time to take some measurements.
+    Perform measurement: measure channel -> move Rx -> ...
+    """
     print('\n################## STARTING MEASUREMENT ##################\n')
     w_time = 20
     for t in range(w_time):
