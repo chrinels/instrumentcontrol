@@ -61,6 +61,9 @@ class PhidgetStepper:
         except PhidgetException as e:
             print('\x1b[1;31mPhidget::SN::{}\x1b[0m <> {}'.format(stepper_sn, e))
 
+    def _get_device_str(self):
+	    return str('\x1b[1;34mPhidget::SN::{}\x1b[0m'.format(self.channel.getDeviceSerialNumber()))
+
     def close(self):
         print('\x1b[1;34mPhidget::SN::{}\x1b[0m > Closing channel {}'.format(self.channel.getDeviceSerialNumber(),
                                                                              self.channel.getChannel()))
@@ -85,13 +88,26 @@ class PhidgetStepper:
 
         return is_moving
 
+    def print_movement_info(self):
+        print('\x1b[1;34mPhidget::SN::{}\x1b[0m < minAcceleration {:8.4f}'.format(
+            self.channel.getDeviceSerialNumber(),
+            self.channel.getMinAcceleration()))
+        print('\x1b[1;34mPhidget::SN::{}\x1b[0m < maxAcceleration {:8.4f}'.format(
+            self.channel.getDeviceSerialNumber(),
+            self.channel.getMaxAcceleration()))        
+        print('\x1b[1;34mPhidget::SN::{}\x1b[0m < velocityLimit {:8.4f}'.format(
+            self.channel.getDeviceSerialNumber(),
+            self.channel.getVelocityLimit()))        
+
 
 if __name__ == '__main__':
 
     phidget_serial_num = 117906
     ph_stepper = PhidgetStepper(stepper_sn=phidget_serial_num)
 
-    ph_stepper.set_target_absolute_position(0)
+    ph_stepper.print_movement_info()
+
+    ph_stepper.set_target_absolute_position(-800)
     ph_stepper.wait_to_settle()
 
     ph_stepper.close()
