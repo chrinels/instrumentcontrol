@@ -16,10 +16,9 @@ n_f_points = 7401  # Number of frequency points between
 f = np.linspace(f_start, f_stop, n_f_points)
 if_bw = 1.0E+3     # IF Bandwidth
 
-phidget_serial_num = 117906
-ph_stepper = PhidgetStepper(stepper_sn=phidget_serial_num)
+ph_stepper = PhidgetStepper(stepper_sn=117906)
 positions = range(0, 801, 1)
-
+n_positions = len(positions)
 
 def measure_and_save(instrument, pos):
     # Tell the VNA to make the sweep
@@ -32,6 +31,10 @@ def measure_and_save(instrument, pos):
 
     # Use h = numpy.load(fname); f = h['f']; s21 = h['hf']
     np.savez_compressed('s21_{}_{}'.format(time.strftime('%Y%m%d_%H%M%S'), pos), hf=hf, f=f)
+
+
+def print_status_bar(c, n):
+    print('\n################## {} {}/{} ##################'.format(time.strftime('%Y%m%d_%H%M%S'), c, n))
 
 
 # Connect to the VNA and configure the measurement settings.
@@ -62,7 +65,7 @@ try:
     vna.ext_write('SENS1:SWE:TIME:AUTO 1')
     estimated_sweep_time = vna.ext_query('SENS1:SWE:TIME?')
 
-    vna.timeout = float(estimated_sweep_time)*1E+3 + 1000   # Milliseconds1
+    vna.timeout = float(estimated_sweep_time)*1E+3 + 1000   # Milliseconds!
 
     # SETUP THE TRACES HERE!
 
@@ -83,8 +86,7 @@ try:
     for pos in positions:
 
         count += 1
-        print('\n################## {}/{} ##################'.format(count, len(positions)+2))
-
+        print_status_bar(count, n_positions+2)
         # Move the antenna and Let the movement settle
         ph_stepper.set_target_absolute_position(pos)
         ph_stepper.wait_to_settle()
@@ -94,12 +96,12 @@ try:
 
         if first:
             count += 1
-            print('\n################## {}/{} ##################'.format(count, len(positions)+2))
+            print_status_bar(count, n_positions+2)
             measure_and_save(vna, pos)
             first = False
 
     count += 1
-    print('\n################## {}/{} ##################'.format(count, len(positions)+2))
+    print_status_bar(count, n_positions+2)
     # MOVE THE ANTENNA to home position
     # Tell the VNA to make the final sweep at pos 0
     # Move the antenna and Let the movement settle
