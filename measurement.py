@@ -12,7 +12,7 @@ debug = True
 resource = 'TCPIP::169.254.86.175::hislip0::INSTR'  # Rohde & Schwarz ZNB8 VNA
 f_start = 2.3E+9
 f_stop = 6.0E+9
-n_f_points = 4001  # Number of frequency points between
+n_f_points = 7401  # Number of frequency points between
 f = np.linspace(f_start, f_stop, n_f_points)
 if_bw = 1.0E+3     # IF Bandwidth
 
@@ -107,7 +107,7 @@ try:
     ph_stepper.wait_to_settle()
     time.sleep(0.5)
 
-    measure_and_save(vna, pos)
+    measure_and_save(vna, positions[0])
 
     # Clean up. Set VNA to Sweep on all channels.
     # Turn on the VNA display.
