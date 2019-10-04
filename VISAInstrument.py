@@ -17,6 +17,24 @@ class VISAInstrument:
     especially the check_error_queue and error_checking methods.
     """
 
+    # Standard SCPI commands that all SCPI compliant instruments
+    # have implemented with defined behaviour.
+    CLS = "*CLS"    # - / no query        Clear status
+    ESE = "*ESE"    # 0..255              Event status enable register
+    ESR = "*ESR?"   # query only          Event status read
+    IDN = "*IDN?"   # query only          Instrument identification
+    IST = "*IST?"   # query only          IST flag (0|1)
+    OPC = "*OPC"    # -                   Operation complete
+    OPT = "*OPT?"   # query only          Option identification query
+    PCB = "*PCB"    # 0..30 / no query    Pass control back
+    PRE = "*PRE"    # 0..255              Parallell poll Register Enable
+    PSC = "*PSC"    # 0 | 1               Power on status clear
+    RST = "*RST"    # - / no query        Reset instrument to default
+    SRE = "*SRE"    # 0..255              Service Request Enable
+    STB = "*STB?"   # query only          Status Byte Query
+    TRG = "*TRG"    # - / no query        Trigger
+    WAI = "*WAI"    # - / no query        Wait to continue
+
     def __init__(self, resource, timeout=1500.0, write_termination='\n', debug=False):
         """
 
