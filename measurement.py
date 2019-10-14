@@ -3,165 +3,132 @@ import time
 import numpy as np
 
 import visa
-import VISAExtension
+import VISAInstrument
 from Stepper import PhidgetStepper
 
 
-debug = True
+# VNA Settings
+vna_conf = {'f_start': 2.3E+9, 'f_stop': 6.0E+9, 'nf_points': 7401, 'if_bw': 1.0E+3}
 
-resource = 'TCPIP::169.254.86.175::hislip0::INSTR'  # Rohde & Schwarz ZNB8 VNA
-f_start = 2.3E+9
-f_stop = 6.0E+9
-n_f_points = 7401  # Number of frequency points between
-f = np.linspace(f_start, f_stop, n_f_points)
-if_bw = 1.0E+3     # IF Bandwidth
-
-ph_stepper = PhidgetStepper(stepper_sn=117906)
-positions = range(0, 801, 1)
-n_positions = len(positions)
-
-def measure_and_save(instrument, pos):
-    # Tell the VNA to make the sweep
-    instrument.ext_write('INIT1:IMM; *WAI')
-    instrument.ext_wait_for_opc()
-
-    hf = instrument.ext_query_values()
-    instrument.ext_wait_for_opc()
-    instrument.ext_error_checking()  # Error Checking after the data transfer
-
-    # Use h = numpy.load(fname); f = h['f']; s21 = h['hf']
-    np.savez_compressed('s21_{}_{}'.format(time.strftime('%Y%m%d_%H%M%S'), pos), hf=hf, f=f)
+f = np.linspace(vna_conf['f_start'], vna_conf['f_stop'], vna_conf['nf_points'])
+vna_conf['f'] = f
 
 
-def print_status_bar(c, n):
-    print('\n################## {} {}/{} ##################'.format(time.strftime('%Y%m%d_%H%M%S'), c, n))
-
-
-# Connect to the VNA and configure the measurement settings.
-rm = visa.ResourceManager()
-
-try:
-    """
-    Try to establish a connection with the instrument.
-    Set some parameters, and the configure the Instrument for your
-    measurement. Set the following:
-    Start frequency
-    Stop frequency
-    IF bandwidth
-    Number of sweep points between f_start and f_stop
-
-    Estimate the time it takes to capture on measurement,
-    then set the timeout on the connection, and add some margin.
-
-    Turn OFF the continous SWEEP on the VNA, instead it will only
-    make ONE sweep when it is told to do so.
-
-    Turn OFF the display updates of the VNA to make it faster.
-
-    NOTE!: Settings that you have changed on the VNA will stay, i.e., you
-    can setup the Instrument completely on the instrument, and then go
-    straight to the capture part of the script.
-
-    Settings that are NOT in this script, but probably should be are:
-    Power
-    Average
-    """
-    vna = rm.open_resource(resource)
-    vna.ext_set_debug(True)
-    vna.ext_set_resource(resource)
-    vna.write_termination = '\n'
-
-    vna.ext_query('*IDN?')                  # Query the Identification string
-    vna.ext_clear_status()                  # Clear instrument io buffers and status
-    vna.timeout = 1500
-
-    vna.ext_write('FORMat:BORDer?')         # Ask instrument for Byte Order, Big or Little Endian
-    vna.ext_read()                          # SWAP = Little Endian, NORM = Big Endian
-
-    # Set up the frequency range, and # of sweep points
-    vna.ext_write('SENS1:FREQ:STAR ' + str(f_start))
-    vna.ext_write('SENS1:FREQ:STOP ' + str(f_stop))
-    vna.ext_write('SENS1:BWID ' + str(if_bw))
-    vna.ext_write('SENS1:SWE:POIN {}'.format(str(n_f_points)))
-
-    vna.ext_wait_for_opc()
-    vna.ext_error_checking()
-
-    vna.ext_write('SENS1:SWE:TIME:AUTO 1')
-    estimated_sweep_time = vna.ext_query('SENS1:SWE:TIME?')
-
-    vna.timeout = float(estimated_sweep_time)*1E+3 + 1000   # Milliseconds!
-
-    # SETUP THE TRACES HERE!
-
-    vna.ext_write('INIT:CONT:ALL OFF')    # Turn off sweeps for all channels
-    vna.ext_write('SYST:DISP:UPD OFF')    # Stop updating the instrument display
-    vna.ext_wait_for_opc()
-    vna.ext_error_checking()
-
-    """
-    Now, the instrument should be set, and now it's time to take some measurements.
-    Perform measurement: measure channel -> move Rx -> ...
-    """
+def do_measurement(vna, phidget, positions):
     print('\n################## STARTING MEASUREMENT ##################\n')
-    w_time = 20
-    for t in range(w_time):
-        print('.. in {} seconds'.format(w_time-t))
-        time.sleep(1)
 
+    n_positions = len(positions)
     first = True
     count = 0
+    
     for pos in positions:
-
         count += 1
         print_status_bar(count, n_positions+2)
+        
         # Move the antenna and Let the movement settle
-        ph_stepper.set_target_absolute_position(pos)
-        ph_stepper.wait_to_settle()
+        phidget.set_target_absolute_position(pos)
+        phidget.wait_to_settle()
         time.sleep(0.5)
 
         measure_and_save(vna, pos)
 
+        # Take to measurement sweeps on the first position to
+        # enable SNR estimation in post-processing.
         if first:
             count += 1
             print_status_bar(count, n_positions+2)
             measure_and_save(vna, pos)
             first = False
 
+    # MOVE THE ANTENNA to home position
+    # This is just some kind of sanity check.
+    # Tell the VNA to make the final sweep at pos 0.
+    # Move the antenna and Let the movement settle.
     count += 1
     print_status_bar(count, n_positions+2)
-    # MOVE THE ANTENNA to home position
-    # Tell the VNA to make the final sweep at pos 0
-    # Move the antenna and Let the movement settle
-    ph_stepper.set_target_absolute_position(positions[0])
-    ph_stepper.wait_to_settle()
+    phidget.set_target_absolute_position(positions[0])
+    phidget.wait_to_settle()
     time.sleep(0.5)
 
     measure_and_save(vna, positions[0])
 
-    # Clean up. Set VNA to Sweep on all channels.
-    # Turn on the VNA display.
-    # Close connection to VNA.
-    vna.ext_write('INIT:CONT:ALL ON')
-    vna.ext_write('SYST:DISP:UPD ON')
 
-    print('\nDisconnecting from:\n{}\tIDN:{}'.format(resource, vna.query('*IDN?')))
-    vna.ext_clear_status()
-    vna.close()
+def measure_and_save(instrument, pos):
+    # Tell the VNA to make the sweep
+    instrument.write('INIT1:IMM; *WAI')
+    instrument.check_opc()
 
-    ph_stepper.close()
+    hf = instrument.query_scattering_values()
+    instrument.check_opc()
+    instrument.error_checking()  # Error Checking after the data transfer
 
-    time.sleep(1)
+    # Use h = numpy.load(fname); f = h['f']; s21 = h['hf']
+    np.savez_compressed('s21_{}_{}'.format(time.strftime('%Y%m%d_%H%M%S'), pos), hf=hf, f=vna_conf['f'])
 
 
-except visa.VisaIOError as e:
-    print('\x1b[1;37;41m Visa IO Error\x1b[0m {}\n{}'.format(resource, e.description))
+def print_status_bar(c, n):
+    print('\n################## {} {}/{} ##################'.format(time.strftime('%Y%m%d_%H%M%S'), c, n))
 
-except visa.LibraryError as e:
-    print('\x1b[1;37;41m VISA Library Error\x1b[0m\n{}'.format(e.message))
 
-except visa.VisaTypeError as e:
-    print('\x1b[1;37;41m VISA Type Error\x1b[0m\n{}'.format(e.message))
+def delay_start(w_time=60):
+    for t in range(w_time):
+        print('.. in {} seconds'.format(w_time-t))
+        time.sleep(1)
 
-except VISAExtension.InstrumentErrorException as e:
-    print('\x1b[1;37;41m Instrument error(s) occurred:\x1b[0m\n{}'.format(e.message))
+
+def setup_instrument(vna):
+    # Set up the frequency range, and # of sweep points
+    vna.write('SENS1:FREQ:STAR ' + str(vna_conf['f_start']))
+    vna.write('SENS1:FREQ:STOP ' + str(vna_conf['f_stop']))
+    vna.write('SENS1:BWID ' + str(vna_conf['if_bw']))
+    vna.write('SENS1:SWE:POIN ' + str(vna_conf['nf_points']))
+
+    vna.check_opc()
+    vna.error_checking()
+
+    # Change the VISA connection timeout
+    vna.write('SENS1:SWE:TIME:AUTO 1')
+    estimated_sweep_time = vna.query('SENS1:SWE:TIME?')
+    vna.visa_connection_timeout(float(estimated_sweep_time)*1E+3 + 1000)   # Milliseconds!
+
+    # Turn off continous sweeps for all channels
+    vna.write('INIT:CONT:ALL OFF')
+    
+    # Stop updating the instrument display
+    vna.write('SYST:DISP:UPD OFF')
+
+    vna.check_opc()
+    vna.error_checking()
+
+
+if __name__ == '__main__':   
+
+    # Open a connection to the Phidget stepper
+    ph_stepper = PhidgetStepper(stepper_sn=117906)
+    positions = range(0, 801, 1)
+
+    try:
+        # Rohde & Schwarz ZNB8 VNA
+        vna = VISAInstrument('TCPIP::169.254.86.175::hislip0::INSTR', debug=True)
+        setup_instrument(vna)
+
+        # Do measurement loop
+        delay_start(5)
+        do_measurement(vna, ph_stepper, positions)
+
+        # Set VNA to Sweep on all channels.
+        # Turn on the VNA display.
+        vna.write('INIT:CONT:ALL ON')
+        vna.write('SYST:DISP:UPD ON')
+
+    except visa.VisaIOError as e:
+        print('\x1b[1;37;41m Visa IO Error\x1b[0m {}\n{}'.format(resource, e.description))
+
+    except visa.LibraryError as e:
+        print('\x1b[1;37;41m VISA Library Error\x1b[0m\n{}'.format(e.message))
+
+    except visa.VisaTypeError as e:
+        print('\x1b[1;37;41m VISA Type Error\x1b[0m\n{}'.format(e.message))
+
+    except VISAExtension.InstrumentErrorException as e:
+        print('\x1b[1;37;41m Instrument error(s) occurred:\x1b[0m\n{}'.format(e.message))

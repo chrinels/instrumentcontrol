@@ -61,6 +61,9 @@ class PhidgetStepper:
         except PhidgetException as e:
             print('\x1b[1;31mPhidget::SN::{}\x1b[0m <> {}'.format(stepper_sn, e))
 
+    def __del__(self):
+        self.close()
+
     def _get_device_str(self):
 	    return str('\x1b[1;34mPhidget::SN::{}\x1b[0m'.format(self.channel.getDeviceSerialNumber()))
 
