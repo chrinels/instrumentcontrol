@@ -90,13 +90,11 @@ class VISAInstrument:
     def write(self, scpi_command):
         if self.debug: self.__debug_string(scpi_command)
         self.instrument.write(scpi_command)
-        self.check_opc()
 
     def query(self, scpi_command):
         if self.debug: self.__debug_string(scpi_command)
         response = self.instrument.query(scpi_command)
         if self.debug: self.__debug_string(response)
-        self.check_opc()
         return response.rstrip()
 
     def idn(self):
