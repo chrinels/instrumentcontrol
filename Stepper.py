@@ -72,6 +72,9 @@ class PhidgetStepper:
                                                                              self.channel.getChannel()))
         self.channel.close()
 
+    def set_acceleration(self, acc):
+        self.channel.setAcceleration(acc)
+
     def set_target_absolute_position(self, position):
         # One full rotation is 2 mm movement along the rail
         shaft_conversion = 1/2
@@ -91,6 +94,9 @@ class PhidgetStepper:
 
         return is_moving
 
+    def set_velocity_limit(self, v_lim):
+        self.channel.setVelocityLimit(v_lim)
+
     def print_movement_info(self):
         print('\x1b[1;34mPhidget::SN::{}\x1b[0m < minAcceleration {:8.4f}'.format(
             self.channel.getDeviceSerialNumber(),
@@ -98,6 +104,9 @@ class PhidgetStepper:
         print('\x1b[1;34mPhidget::SN::{}\x1b[0m < maxAcceleration {:8.4f}'.format(
             self.channel.getDeviceSerialNumber(),
             self.channel.getMaxAcceleration()))        
+        print('\x1b[1;34mPhidget::SN::{}\x1b[0m < Acceleration {:8.4f}'.format(
+            self.channel.getDeviceSerialNumber(),
+            self.channel.getAcceleration()))        
         print('\x1b[1;34mPhidget::SN::{}\x1b[0m < velocityLimit {:8.4f}'.format(
             self.channel.getDeviceSerialNumber(),
             self.channel.getVelocityLimit()))        
