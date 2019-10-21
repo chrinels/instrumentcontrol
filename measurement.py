@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 import visa
-import VISAInstrument
+from VISAInstrument import VISAInstrument
 from Stepper import PhidgetStepper
 
 
@@ -105,6 +105,8 @@ if __name__ == '__main__':
 
     # Open a connection to the Phidget stepper
     ph_stepper = PhidgetStepper(stepper_sn=117906)
+    ph_stepper.set_velocity_limit(0.25)
+    ph_stepper.set_acceleration(ph_stepper.channel.getMinAcceleration())
     positions = range(0, 801, 1)
 
     try:
@@ -113,7 +115,7 @@ if __name__ == '__main__':
         setup_instrument(vna)
 
         # Do measurement loop
-        delay_start(5)
+        delay_start(3600*10)
         do_measurement(vna, ph_stepper, positions)
 
         # Set VNA to Sweep on all channels.
