@@ -41,6 +41,10 @@ class VISAInstrument:
     """
     This class is heavily inspired by R&S VISAresourceExtensions.py,
     especially the check_error_queue and error_checking methods.
+
+    [2020-04-02] Links working
+    https://www.rohde-schwarz.com/se/applications/using-r-s-forum-application-for-instrument-remote-control-application-note_56280-50946.html
+    https://www.rohde-schwarz.com/se/driver-pages/remote-control/why-visa-_231254.html
     """
 
     def __init__(self, resource, timeout=1500.0, write_termination='\n', debug=False):
