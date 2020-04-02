@@ -10,7 +10,7 @@ import time
 from Phidget22.Devices.Stepper import *
 from Phidget22.Phidget import *
 
-import PhidgetHandlers
+from instrumentcontrol import PhidgetHandlers
 
 '''
 #
@@ -42,12 +42,16 @@ import PhidgetHandlers
 '''
 
 
-class PhidgetStepper:
+class Positioner:
 
     def __init__(self, stepper_sn, debug=False):
+        self.debug = debug
         try:
-            self.debug = debug
             self.channel = Stepper()
+        except Exception as e:
+            print('\x1b[1;31mPhidget::SN::{}\x1b[0m <> {}'.format(stepper_sn, e))
+
+        try:
             self.channel.setDeviceSerialNumber(stepper_sn)
             self.channel.setIsHubPortDevice(False)
             self.channel.setChannel(0)
@@ -65,7 +69,7 @@ class PhidgetStepper:
         self.close()
 
     def _get_device_str(self):
-	    return str('\x1b[1;34mPhidget::SN::{}\x1b[0m'.format(self.channel.getDeviceSerialNumber()))
+        return str('\x1b[1;34mPhidget::SN::{}\x1b[0m'.format(self.channel.getDeviceSerialNumber()))
 
     def close(self):
         print('\x1b[1;34mPhidget::SN::{}\x1b[0m > Closing channel {}'.format(self.channel.getDeviceSerialNumber(),
@@ -115,7 +119,7 @@ class PhidgetStepper:
 if __name__ == '__main__':
 
     phidget_serial_num = 117906
-    ph_stepper = PhidgetStepper(stepper_sn=phidget_serial_num)
+    ph_stepper = Positioner(stepper_sn=phidget_serial_num)
 
     ph_stepper.print_movement_info()
 

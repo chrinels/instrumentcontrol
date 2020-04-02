@@ -2,6 +2,32 @@ import visa
 import numpy as np
 
 
+class SCPICommands:
+
+    """
+    The Standard Commands for Programmable Instrumentation (SCPI)
+
+    Standard commands that all SCPI compliant instruments
+    have implemented with defined behaviour.
+    """
+    CLS = "*CLS"    # - / no query        Clear status
+    ESE = "*ESE"    # 0..255              Event status enable register
+    ESR = "*ESR?"   # query only          Event status read
+    IDN = "*IDN?"   # query only          Instrument identification
+    IST = "*IST?"   # query only          IST flag (0|1)
+    OPC = "*OPC"    # -                   Operation complete
+    OPCQ = "*OPC?"  # -                   Operation complete Query
+    OPT = "*OPT?"   # query only          Option identification query
+    PCB = "*PCB"    # 0..30 / no query    Pass control back
+    PRE = "*PRE"    # 0..255              Parallell poll Register Enable
+    PSC = "*PSC"    # 0 | 1               Power on status clear
+    RST = "*RST"    # - / no query        Reset instrument to default
+    SRE = "*SRE"    # 0..255              Service Request Enable
+    STB = "*STB?"   # query only          Status Byte Query
+    TRG = "*TRG"    # - / no query        Trigger
+    WAI = "*WAI"    # - / no query        Wait to continue
+
+
 class VISAInstrumentErrorException(Exception):
     def __init__(self, errors):
         # Call the base class constructor with the parameters it needs
@@ -16,24 +42,6 @@ class VISAInstrument:
     This class is heavily inspired by R&S VISAresourceExtensions.py,
     especially the check_error_queue and error_checking methods.
     """
-
-    # Standard SCPI commands that all SCPI compliant instruments
-    # have implemented with defined behaviour.
-    CLS = "*CLS"    # - / no query        Clear status
-    ESE = "*ESE"    # 0..255              Event status enable register
-    ESR = "*ESR?"   # query only          Event status read
-    IDN = "*IDN?"   # query only          Instrument identification
-    IST = "*IST?"   # query only          IST flag (0|1)
-    OPC = "*OPC"    # -                   Operation complete
-    OPT = "*OPT?"   # query only          Option identification query
-    PCB = "*PCB"    # 0..30 / no query    Pass control back
-    PRE = "*PRE"    # 0..255              Parallell poll Register Enable
-    PSC = "*PSC"    # 0 | 1               Power on status clear
-    RST = "*RST"    # - / no query        Reset instrument to default
-    SRE = "*SRE"    # 0..255              Service Request Enable
-    STB = "*STB?"   # query only          Status Byte Query
-    TRG = "*TRG"    # - / no query        Trigger
-    WAI = "*WAI"    # - / no query        Wait to continue
 
     def __init__(self, resource, timeout=1500.0, write_termination='\n', debug=False):
         """
@@ -84,21 +92,31 @@ class VISAInstrument:
 
     def read(self):
         response = self.instrument.read()
-        if self.debug: self.__debug_string(response)
+
+        if self.debug:
+            self.__debug_string(response)
+
         return response.rstrip()
 
     def write(self, scpi_command):
-        if self.debug: self.__debug_string(scpi_command)
+        if self.debug:
+            self.__debug_string(scpi_command)
+
         self.instrument.write(scpi_command)
 
     def query(self, scpi_command):
-        if self.debug: self.__debug_string(scpi_command)
+        if self.debug:
+            self.__debug_string(scpi_command)
+
         response = self.instrument.query(scpi_command)
-        if self.debug: self.__debug_string(response)
+
+        if self.debug:
+            self.__debug_string(response)
+
         return response.rstrip()
 
     def idn(self):
-        return self.query('*IDN?')
+        return self.query(SCPICommands.IDN)
 
     def clear_status(self):
         """
@@ -106,10 +124,11 @@ class VISAInstrument:
         :return:
         """
         self.instrument.clear()
-        self.query('*CLS;*OPC?')
+        self.query(SCPICommands.CLS)
+        self.query(SCPICommands.OPCQ)
 
     def reset(self):
-        self.write('*RST')
+        self.write(SCPICommands.RST)
 
     def check_opc(self):
         self.write('*OPC?')
@@ -121,7 +140,7 @@ class VISAInstrument:
         :return:
         """
         errors = []
-        stb = int(self.query('*STB?'))
+        stb = int(self.query(SCPICommands.STB))
         if (stb & 4) == 0:
             return errors
 
@@ -151,31 +170,6 @@ class VISAInstrument:
         if errors is not None and len(errors) > 0:
             raise VISAInstrumentErrorException(errors)
 
-    def get_freq_star(self):
-        return self.write('SENS1:FREQ:STAR?')
-
-    def set_freq_star(self, val):
-        if not isinstance(val, int):
-            raise VISAInstrumentErrorException('')
-        if val < 0:
-            raise VISAInstrumentErrorException('')
-
-        self.write('SENS1:FREQ:STAR ' + str(val))
-
-    def query_scattering_values(self):
-        self.write('CALC:DATA? SDAT')
-        resp = self.read()
-        resp = resp.rstrip()
-        resp = resp.split(',')
-        resp_numpy = np.array(resp, dtype=np.float)
-        resp_numpy_comp = resp_numpy[:-1:2] + 1j * resp_numpy[1::2]
-        self.error_checking()
-
-        if self.debug:
-            print('{} < Saved {} complex values'.format(self.resource.rstrip(),
-                                                        len(resp_numpy_comp)))
-        return resp_numpy_comp
-
 
 if __name__ == '__main__':
     try:
@@ -204,8 +198,8 @@ if __name__ == '__main__':
         for _ in range(100):
 
             # Tell the VNA to make the sweep
-            vna.write('INIT1:IMM; *WAI')
-            vna.query_scattering_values()
+            vna.write('INIT1:IMM')
+            vna.write(SCPICommands.WAI)
 
         # Set VNA to Sweep on all channels.
         # Turn on the VNA display.
@@ -223,3 +217,6 @@ if __name__ == '__main__':
 
     except VISAInstrumentErrorException as e:
         print('Instrument error(s) occurred:\n{}'.format(e.message))
+
+    except AttributeError as e:
+        print('Attribute error(s) occurred:\n{}'.format(e.message))

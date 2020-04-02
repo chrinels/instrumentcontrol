@@ -3,8 +3,8 @@ import time
 import numpy as np
 
 import visa
-from VISAInstrument import VISAInstrument
-from Stepper import PhidgetStepper
+from instrumentcontrol import VISAInstrument, VISAInstrumentErrorException
+from instrumentcontrol import Positioner
 
 
 # VNA Settings
@@ -58,7 +58,13 @@ def measure_and_save(instrument, pos):
     instrument.write('INIT1:IMM; *WAI')
     instrument.check_opc()
 
-    hf = instrument.query_scattering_values()
+    instrument.write('CALC:DATA? SDAT')
+    resp = instrument.read()
+    resp = resp.rstrip()
+    resp = resp.split(',')
+    resp_numpy = np.array(resp, dtype=np.float)
+    hf = resp_numpy[:-1:2] + 1j * resp_numpy[1::2]
+
     instrument.check_opc()
     instrument.error_checking()  # Error Checking after the data transfer
 
@@ -104,7 +110,7 @@ def setup_instrument(vna):
 if __name__ == '__main__':   
 
     # Open a connection to the Phidget stepper
-    ph_stepper = PhidgetStepper(stepper_sn=117906)
+    ph_stepper = Positioner(stepper_sn=117906)
     ph_stepper.set_velocity_limit(0.25)
     ph_stepper.set_acceleration(ph_stepper.channel.getMinAcceleration())
     positions = range(0, 801, 1)
@@ -124,7 +130,7 @@ if __name__ == '__main__':
         vna.write('SYST:DISP:UPD ON')
 
     except visa.VisaIOError as e:
-        print('\x1b[1;37;41m Visa IO Error\x1b[0m {}\n{}'.format(resource, e.description))
+        print('\x1b[1;37;41m Visa IO Error\x1b[0m {}\n{}'.format(vna.resource, e.description))
 
     except visa.LibraryError as e:
         print('\x1b[1;37;41m VISA Library Error\x1b[0m\n{}'.format(e.message))
@@ -132,5 +138,5 @@ if __name__ == '__main__':
     except visa.VisaTypeError as e:
         print('\x1b[1;37;41m VISA Type Error\x1b[0m\n{}'.format(e.message))
 
-    except VISAExtension.InstrumentErrorException as e:
+    except VISAInstrumentErrorException as e:
         print('\x1b[1;37;41m Instrument error(s) occurred:\x1b[0m\n{}'.format(e.message))
