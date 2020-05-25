@@ -15,8 +15,8 @@ sudo yum -y install libusbx-devel
 - NI-VISA
 
 ### 1.1 Install NI-VISA
-Download the [NI Linux Device Drivers](http://www.ni.com/download/ni-linux-device-drivers-2018/7664/en/)
-- [NI Linux Device Drivers.zip](http://download.ni.com/support/softlib/MasterRepository/NI%20Linux%20Device%20Drivers.zip)
+Download the [NI Linux Device Drivers (July 2018)](http://www.ni.com/download/ni-linux-device-drivers-2018/7664/en/)
+- [NI Linux Device Drivers.zip (July 2018)](http://download.ni.com/support/softlib/MasterRepository/NI%20Linux%20Device%20Drivers.zip)
 
 Unpack the zip-file and as sudo-user install
 ```linux
@@ -54,7 +54,7 @@ Now you can choose to install the drivers you'll need.
 ```linux
 sudo yum install -y ni-visa ni-visa-config
 ```
-### 1.2 Install python3.6 on CentOS
+### 1.2 Install python3.6 on CentOS 7
 [Python3.6 on CentOS 7](https://www.digitalocean.com/community/tutorials/how-to-install-python-3-and-set-up-a-local-programming-environment-on-centos-7)
 ```linux
 sudo yum -y update
